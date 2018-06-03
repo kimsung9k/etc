@@ -63,83 +63,14 @@ class Widget_buttons( QWidget ):
         super( Widget_buttons, self ).__init__( *args, **kwargs )
         mainLayout = QGridLayout( self ); mainLayout.setContentsMargins( 0,0,0,0 ); mainLayout.setSpacing( 5 )
 
-        b_selNext = QPushButton("Select Next")
-        b_selPrev = QPushButton("Select Previous")
-        b_addNext = QPushButton("Add Next")
-        b_addPrev = QPushButton("Add Previous")
-        b_selAll  = QPushButton( "Select All" )
-
-        mainLayout.addWidget(b_selNext, 0, 0)
-        mainLayout.addWidget(b_selPrev, 0, 1)
-        mainLayout.addWidget(b_addNext, 1, 0)
-        mainLayout.addWidget(b_addPrev, 1, 1)
+        b_selAll  = QPushButton( "Select" )
         mainLayout.addWidget(b_selAll, 0, 2, 2, 1 )
         self.lastEdge = None
 
-        b_selNext.clicked.connect(self.cmd_selectNextEdge)
-        b_selPrev.clicked.connect(self.cmd_selectPrevEdge)
-        b_addNext.clicked.connect(self.cmd_addNextEdge)
-        b_addPrev.clicked.connect(self.cmd_addPrevEdge)
-        b_selAll.clicked.connect( self.cmd_selectAll )
+        b_selAll.clicked.connect( self.cmd_selectIntervared )
 
 
-    def cmd_selectNextEdge(self):
-        selNum  = Window.currentInstance.w_selectNum.spinBox.value()
-        skipNum = Window.currentInstance.w_skipNum.spinBox.value()
-
-        import pymel.core
-        if self.lastEdge:
-            pymel.core.select( self.lastEdge )
-        sels = pymel.core.ls(sl=1)
-        meshName = sels[0].node().name()
-        edgeIndex = sels[0].index()
-        inst = commands.EdgeSelector(meshName, edgeIndex)
-        lastEdge = inst.selectNextEdge(selNum, skipNum)
-
-
-    def cmd_selectPrevEdge(self):
-        selNum  = Window.currentInstance.w_selectNum.spinBox.value()
-        skipNum = Window.currentInstance.w_skipNum.spinBox.value()
-
-        import pymel.core
-        if self.lastEdge:
-            pymel.core.select( self.lastEdge )
-        sels = pymel.core.ls(sl=1)
-        meshName = sels[0].node().name()
-        edgeIndex = sels[0].index()
-        inst = commands.EdgeSelector(meshName, edgeIndex)
-        lastEdge = inst.selectPrevEdge(selNum, skipNum)
-
-
-    def cmd_addNextEdge(self):
-        selNum  = Window.currentInstance.w_selectNum.spinBox.value()
-        skipNum = Window.currentInstance.w_skipNum.spinBox.value()
-
-        import pymel.core
-        if self.lastEdge:
-            pymel.core.select( self.lastEdge )
-        sels = pymel.core.ls(sl=1)
-        meshName = sels[0].node().name()
-        edgeIndex = sels[0].index()
-        inst = commands.EdgeSelector(meshName, edgeIndex)
-        lastEdge = inst.addNextEdge(selNum, skipNum)
-
-
-    def cmd_addPrevEdge(self):
-        selNum  = Window.currentInstance.w_selectNum.spinBox.value()
-        skipNum = Window.currentInstance.w_skipNum.spinBox.value()
-
-        import pymel.core
-        if self.lastEdge:
-            pymel.core.select( self.lastEdge )
-        sels = pymel.core.ls(sl=1)
-        meshName = sels[0].node().name()
-        edgeIndex = sels[0].index()
-        inst = commands.EdgeSelector(meshName, edgeIndex)
-        lastEdge = inst.addPrevEdge(selNum, skipNum)
-
-
-    def cmd_selectAll(self):
+    def cmd_selectIntervared(self):
         import pymel.core
         selNum = Window.currentInstance.w_selectNum.spinBox.value()
         skipNum = Window.currentInstance.w_skipNum.spinBox.value()
@@ -147,7 +78,7 @@ class Widget_buttons( QWidget ):
         meshName = sels[0].node().name()
         edgeIndex = sels[0].index()
         inst = commands.EdgeSelector(meshName, edgeIndex, [] )
-        inst.selectAllEdges( selNum, skipNum )
+        inst.selectIntervaredEdges( selNum, skipNum )
 
 
 

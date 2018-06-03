@@ -24,7 +24,6 @@ class EdgeSelector():
         self.fnMesh = OpenMaya.MFnMesh( self.oMesh )
         self.itMeshEdge = OpenMaya.MItMeshEdge( self.oMesh )
         self.itMeshPolygon = OpenMaya.MItMeshPolygon( self.oMesh )
-        self.checkedEdgeList = []
 
 
     def getSideEdges(self, edgeIndex ):
@@ -41,6 +40,8 @@ class EdgeSelector():
         connectedFaces = [intArrFaceIndices[i] for i in range(intArrFaceIndices.length())]
         connectedEdges = [ intArrEdgeIndices[i] for i in range(intArrEdgeIndices.length())]
 
+        if len( connectedFaces ) > 2: return []
+
         sideEdges = []
         for fIndex in connectedFaces:
             self.itMeshPolygon.setIndex(fIndex, self.ptrIndex )
@@ -55,175 +56,87 @@ class EdgeSelector():
         return sideEdges
 
 
-    def getNextEdge(self, currentIndex=None, prevIndex=None ):
-        if not currentIndex: currentIndex = self.baseIndex
+    def getNextEdge(self, currentIndex, prevIndex=None ):
         sideEdges = self.getSideEdges(currentIndex)
         if len( sideEdges ) > 2: return None
         nextEdge = None
         for sideEdge in sideEdges:
-            if self.prevIndex == sideEdge: continue
             if prevIndex == sideEdge: continue
             nextEdge = sideEdge
             break
-        self.checkedEdgeList.append(nextEdge)
         return nextEdge
 
 
-    def getPrevEdge(self, currentIndex=None, prevIndex=None ):
-        if not currentIndex: currentIndex = self.baseIndex
-        sideEdges = self.getSideEdges(currentIndex)
-        if len(sideEdges) > 2: return None
-        prevEdge = None
-        if type( self.prevIndex ) == int:
-            for sideEdge in sideEdges:
-                if self.prevIndex == sideEdge: continue
-                if prevIndex == sideEdge: continue
-                prevEdge = sideEdge
-                break
-        else:
-            if len( sideEdges ) == 1:
-                prevEdge = sideEdges[0]
-            else:
-                prevEdge = sideEdges[1]
-        self.checkedEdgeList.append( prevEdge )
-        return prevEdge
+    def getOrderedEdges(self):
 
+        firstIndex = self.baseIndex
+        secondIndex = self.getNextEdge(firstIndex)
+        checkedList = [firstIndex, secondIndex]
 
-    def selectAllEdges(self, selNum, skipNum ):
+        def isNewIndex(index, checkedList):
+            if type(index) != int: return False
+            if index in checkedList: return False
+            return True
 
-        import pymel.core
-        def getIntervaledIndicesNext( startIndex, prevEdge=None ):
-            nextEdge = startIndex
-            selEdges = [startIndex]
-            for i in range(selNum-1):
-                keepPrev = copy.copy(nextEdge)
-                nextEdge = self.getNextEdge(nextEdge, prevEdge)
-                selEdges.append(nextEdge)
-                prevEdge = keepPrev
-            for i in range(skipNum+1):
-                keepPrev = copy.copy(nextEdge)
-                nextEdge = self.getNextEdge(nextEdge, prevEdge)
-                prevEdge = keepPrev
-            return selEdges, nextEdge, prevEdge
-
-        def getIntervaledIndicesPrev( startIndex, prevEdge=None ):
-            nextEdge = startIndex
-            for i in range(skipNum):
-                keepPrev = copy.copy(nextEdge)
-                nextEdge = self.getPrevEdge(nextEdge, prevEdge)
-                prevEdge = keepPrev
-            selEdges = []
-            for i in range(selNum):
-                keepPrev = copy.copy(nextEdge)
-                nextEdge = self.getPrevEdge(nextEdge, prevEdge)
-                selEdges.append(nextEdge)
-                prevEdge = keepPrev
-            return selEdges, self.getNextEdge( selEdges[-1] )
-
-        startIndex = self.baseIndex
-        resultSelEdges = []
-        maxIndex = 100
-        currentIndex = 0
-        prevEdge = None
+        first = copy.copy(firstIndex)
+        second = copy.copy(secondIndex)
         while True:
-            currentList = copy.copy( self.checkedEdgeList )
-            selEdges, startIndex, prevEdge = getIntervaledIndicesNext( startIndex, prevEdge )
-            if startIndex in currentList:
-                break
-            resultSelEdges += selEdges
-            currentIndex+=1
-            if currentIndex > maxIndex: break
-        startIndex = self.baseIndex
-        breakLoop = False
+            next = self.getNextEdge(second, first )
+            #print "next f: ", next, checkedList
+            if not isNewIndex(next, checkedList): break
+            checkedList.append(next)
+            first = second
+            second = next
 
-        selEdgeNames = []
-        for selEdge in resultSelEdges:
-            if type( selEdge ) != int: continue
-            selEdgeNames.append( self.meshName + '.e[%d]' % selEdge )
-        pymel.core.select( selEdgeNames )
-
-
-    def selectNextEdge(self, selNum, intervalNum ):
-        prevEdge = None
-        nextEdge = self.baseIndex
-        for i in range( intervalNum ):
-            keepPrev = copy.copy( nextEdge )
-            nextEdge = self.getNextEdge( nextEdge, prevEdge )
-            prevEdge = keepPrev
-        selEdges = []
-        for i in range( selNum ):
-            keepPrev = copy.copy(nextEdge)
-            nextEdge = self.getNextEdge(nextEdge, prevEdge)
-            selEdges.append( nextEdge )
-            prevEdge = keepPrev
-
-        edgeNames = []
-        for indexEdge in selEdges:
-            edgeNames.append( self.meshName + '.e[%d]' % indexEdge )
-        pymel.core.select( edgeNames )
-        return edgeNames[-1]
+        first = copy.copy(secondIndex)
+        second = copy.copy(firstIndex)
+        while True:
+            next = self.getNextEdge(second, first)
+            #print "next b: ", next, checkedList
+            if not isNewIndex(next, checkedList): break
+            checkedList.insert(0, next)
+            first = second
+            second = next
+        return checkedList
 
 
-    def selectPrevEdge(self, selNum, intervalNum ):
-        prevEdge = None
-        nextEdge = self.baseIndex
-        for i in range( intervalNum ):
-            keepPrev = copy.copy( nextEdge )
-            nextEdge = self.getPrevEdge( nextEdge, prevEdge )
-            prevEdge = keepPrev
-        selEdges = []
-        for i in range( selNum ):
-            keepPrev = copy.copy(nextEdge)
-            nextEdge = self.getPrevEdge(nextEdge, prevEdge)
-            selEdges.append( nextEdge )
-            prevEdge = keepPrev
+    def getIntervaredEdges(self, selNum, skipNum ):
+        orderedEdges = self.getOrderedEdges()
+        #print "orderedEdges : ", orderedEdges
+        rootIndex = orderedEdges.index( self.baseIndex )
 
-        edgeNames = []
-        for indexEdge in selEdges:
-            edgeNames.append( self.meshName + '.e[%d]' % indexEdge )
-        pymel.core.select( edgeNames )
-        return edgeNames[-1]
+        selIndices = []
+        currentIndex = copy.copy( rootIndex )
+        while True:
+            selIndices.append(currentIndex)
+            for i in range(selNum - 1):
+                currentIndex += 1
+                if currentIndex >= len(orderedEdges): break
+                selIndices.append(currentIndex)
+            for i in range(skipNum + 1):
+                currentIndex += 1
+                if currentIndex >= len(orderedEdges): break
+            if currentIndex >= len(orderedEdges): break
 
-    def addNextEdge(self, selNum, intervalNum ):
-        prevEdge = None
-        nextEdge = self.baseIndex
-        for i in range( intervalNum ):
-            keepPrev = copy.copy( nextEdge )
-            nextEdge = self.getNextEdge( nextEdge, prevEdge )
-            prevEdge = keepPrev
-        selEdges = []
-        for i in range( selNum ):
-            keepPrev = copy.copy(nextEdge)
-            nextEdge = self.getNextEdge(nextEdge, prevEdge)
-            selEdges.append( nextEdge )
-            prevEdge = keepPrev
-
-        edgeNames = []
-        for indexEdge in selEdges:
-            edgeNames.append( self.meshName + '.e[%d]' % indexEdge )
-        pymel.core.select( edgeNames, add=1 )
-        return edgeNames[-1]
+        currentIndex = copy.copy( rootIndex )
+        while True:
+            for i in range( skipNum ):
+                currentIndex -= 1
+                if currentIndex <= 0: break
+            for i in range( selNum ):
+                currentIndex -= 1
+                if currentIndex <= 0: break
+                selIndices.append(currentIndex)
+            if currentIndex <= 0: break
+        return [ orderedEdges[i] for i in selIndices ]
 
 
-    def addPrevEdge(self, selNum, intervalNum ):
-        prevEdge = None
-        nextEdge = self.baseIndex
-        for i in range( intervalNum ):
-            keepPrev = copy.copy( nextEdge )
-            nextEdge = self.getPrevEdge( nextEdge, prevEdge )
-            prevEdge = keepPrev
-        selEdges = []
-        for i in range( selNum ):
-            keepPrev = copy.copy(nextEdge)
-            nextEdge = self.getPrevEdge(nextEdge, prevEdge)
-            selEdges.append( nextEdge )
-            prevEdge = keepPrev
+    def selectIntervaredEdges(self, selNum, skipNum ):
 
-        edgeNames = []
-        for indexEdge in selEdges:
-            edgeNames.append( self.meshName + '.e[%d]' % indexEdge )
-        pymel.core.select( edgeNames, add=1 )
-        return edgeNames[-1]
-
-
-
+        from maya import cmds
+        indices = self.getIntervaredEdges( selNum, skipNum )
+        #print "indices : ", indices
+        edges = []
+        for index in indices:
+            edges.append( self.meshName + '.e[%d]' % index )
+        cmds.select( edges )
